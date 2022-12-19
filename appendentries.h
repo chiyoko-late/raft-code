@@ -9,7 +9,7 @@
 #include <time.h>
 
 #define SERVER_ADDR "0.0.0.0"
-#define MAX 100
+#define MAX (10000 * 10000)
 #define ENTRY_NUM 100
 
 uint64_t c1, c2;
@@ -113,7 +113,7 @@ void write_log(
     fwrite(&AS_PS->currentTerm, sizeof(int), 1, logfile);
     fwrite(&AS_PS->voteFor, sizeof(int), 1, logfile);
     fwrite(&AS_PS->log[i].term, sizeof(int), 1, logfile);
-    fwrite(&AS_PS->log[i].entry, sizeof(char), 256, logfile);
+    fwrite(&AS_PS->log[i].entry, sizeof(char), MAX, logfile);
 
     fclose(logfile);
     return;
@@ -130,12 +130,12 @@ void read_log(
     fseek(logfile, 0L, SEEK_SET);
     for (int j = 1; j < i; j++)
     {
-        fseek(logfile, 268L, SEEK_CUR);
+        fseek(logfile, (MAX + 3), SEEK_CUR);
     }
     fread(&(AS_PS->currentTerm), sizeof(int), 1, logfile);
     fread(&(AS_PS->voteFor), sizeof(int), 1, logfile);
     fread(&(AS_PS->log[i].term), sizeof(int), 1, logfile);
-    fread(&(AS_PS->log[i].entry), sizeof(char), 256, logfile);
+    fread(&(AS_PS->log[i].entry), sizeof(char), MAX, logfile);
 
     printf("[logfile]AS_PS->currentTerm = %d\n", AS_PS->currentTerm);
     printf("[logfile] AS_PS->voteFor = %d\n", AS_PS->voteFor);
