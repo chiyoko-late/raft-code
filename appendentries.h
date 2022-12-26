@@ -103,7 +103,7 @@ void write_log(
 {
     FILE *logfile;
 
-    logfile = fopen(filename, "ab+"); //追加読み書き
+    logfile = fopen(filename, "ab+"); // 追加読み書き
     if (logfile == NULL)
     {
         printf("cannot write log\n");
@@ -149,7 +149,7 @@ void read_log(
 void output_AERPC_A(struct AppendEntriesRPC_Argument *p)
 {
     printf("term: %d\n", p->term);
-    printf("entry: %s\n", p->entries[0]); //今は一度に一つのentryしか送らない場合のみ考える
+    printf("entry: %s\n", p->entries[0]); // 今は一度に一つのentryしか送らない場合のみ考える
     printf("prevLogIndex: %d\n", p->prevLogIndex);
     printf("prevLogTerm: %d\n", p->prevLogTerm);
     printf("LeaderCommitIndex: %d\n", p->leaderCommit);

@@ -47,7 +47,7 @@ int consistency_check(
     /* log記述 */
 
     write_log(rpc->prevLogIndex + 1, as_ps);
-    // read_log(rpc->prevLogIndex + 1);
+    read_log(rpc->prevLogIndex + 1);
 
     // 5. If leaderCmakeommit> commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
     if (rpc->leaderCommit > as_vs->commitIndex)
@@ -68,6 +68,7 @@ int transfer(
 {
 
     /* クライアントから文字列を受信 */
+    // ここ変える
     recv(sock, AERPC_A, sizeof(struct AppendEntriesRPC_Argument), MSG_WAITALL);
     recv(sock, AERPC_A->entries[0], sizeof(char) * MAX, MSG_WAITALL);
     // output_AERPC_A(AERPC_A);

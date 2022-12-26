@@ -14,6 +14,8 @@ int AppendEntriesRPC(
     int replicatelog_num = 0;
 
     /* AERPC_Aの設定 */
+    // このentryを1つしか送れないのを変更する。argvで受け取った数だけ送れるようにするのが理想。
+
     AERPC_A->term = AS_PS->log[L_VS->nextIndex[0]].term;
     AERPC_A->prevLogIndex = L_VS->nextIndex[0] - 1;
     AERPC_A->prevLogTerm = AS_PS->log[AERPC_A->prevLogIndex].term;
@@ -22,7 +24,6 @@ int AppendEntriesRPC(
 
     // output_AERPC_A(AERPC_A);
 
-    //ここのfor分の回し方変えるかどうにかしてserverの数が違くてもちゃんと動くように変える
     for (int i = 0; i < connectserver_num; i++)
     {
         send(sock[i], AERPC_A, sizeof(struct AppendEntriesRPC_Argument), 0);
@@ -114,7 +115,7 @@ int main(int argc, char *argv[])
     struct Leader_VolatileState *L_VS = malloc(sizeof(struct Leader_VolatileState));
     entries_box(AERPC_A);
 
-    //初期設定
+    // 初期設定
     AERPC_A->term = 1;
     AERPC_A->leaderID = 1;
     AERPC_A->prevLogIndex = 0;
@@ -145,7 +146,7 @@ int main(int argc, char *argv[])
     make_logfile(argv[1]);
 
     /* 接続済のソケットでデータのやり取り */
-    //今は受け取れるentryが有限
+    // 今は受け取れるentryが有限
     for (int i = 1; i < ENTRY_NUM; i++)
     {
         /* followerに送る */
