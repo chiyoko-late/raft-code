@@ -1,19 +1,19 @@
 #ifndef _MY_SOCK_H
 #define _MY_SOCK_H 1
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <time.h>
+// #include <sys/socket.h>
+// #include <sys/types.h>
+// #include <netinet/in.h>
+// #include <arpa/inet.h>
+// #include <stdio.h>
+// #include <string.h>
+// #include <unistd.h>
+// #include <stdlib.h>
+// #include <stdbool.h>
+// #include <time.h>
 
-#include <stddef.h>
-#include <errno.h>
-#include <fcntl.h>
+// #include <stddef.h>
+// #include <errno.h>
+// #include <fcntl.h>
 
 typedef struct _ae_req
 {

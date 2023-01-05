@@ -25,7 +25,7 @@ int AppendEntriesRPC(
     }
     AERPC_A->leaderCommit = AS_VS->commitIndex;
 
-    output_AERPC_A(AERPC_A);
+    // output_AERPC_A(AERPC_A);
 
     for (int i = 0; i < connectserver_num; i++)
     {
@@ -158,29 +158,30 @@ int main(int argc, char *argv[])
 
     /* 接続済のソケットでデータのやり取り */
     // 今は受け取れるentryが有限
-    for (int i = 1; i < ENTRY_NUM; i++)
+    for (int i = 1; i < (ENTRY_NUM / NUM); i++)
     {
         /* followerに送る */
         /* AS_PSの更新 */
+        printf("%d", i);
         for (int num = 1; num < NUM; num++)
         {
-            printf("Input -> ");
-            scanf("%s", str);
+            // printf("Input -> ");
+            // scanf("%s", str);
 
             /* log[0]には入れない。log[1]から始める。　first index is 1*/
             // AERPC_A->entries[0] = str;
             strcpy(AS_PS->log[(i - 1) * (NUM - 1) + num].entry, str);
             AS_PS->log[(i - 1) * (NUM - 1) + num].term = AS_PS->currentTerm;
 
-            printf("AS_PS->log[%d].term = %d\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].term);
-            printf("AS_PS->log[%d].entry = %s\n\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].entry);
+            // printf("AS_PS->log[%d].term = %d\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].term);
+            // printf("AS_PS->log[%d].entry = %s\n\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].entry);
         }
         clock_gettime(CLOCK_MONOTONIC, &ts1);
 
         /* logを書き込み */
 
         write_log(i, AS_PS);
-        read_log(i);
+        // read_log(i);
 
         /* AS_VSの更新 */
         // AS_VS->commitIndex = ; ここの段階での変更は起きない

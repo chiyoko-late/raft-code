@@ -52,7 +52,7 @@ int consistency_check(
     as_vs->LastAppliedIndex = rpc->prevLogIndex + NUM;
     /* log記述 */
     write_log(rpc->prevLogIndex / (NUM - 1) + 1, as_ps);
-    read_log(rpc->prevLogIndex / (NUM - 1) + 1);
+    // read_log(rpc->prevLogIndex / (NUM - 1) + 1);
 
     // 5. If leaderCmakeommit> commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
     if (rpc->leaderCommit > as_vs->commitIndex)
@@ -82,7 +82,7 @@ int transfer(
         // recv(sock, AERPC_A->entries[num - 1], sizeof(char) * MAX, MSG_WAITALL);
         my_recv(sock, AERPC_A->entries[num - 1], sizeof(char) * MAX);
     }
-    output_AERPC_A(AERPC_A);
+    // output_AERPC_A(AERPC_A);
 
     // consistency check
     AERPC_R->success = consistency_check(AERPC_A, AS_PS, AS_VS);

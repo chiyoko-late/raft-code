@@ -25,8 +25,8 @@
 
 #define SERVER_ADDR "0.0.0.0"
 #define MAX (1000 * 100)
-#define ENTRY_NUM 100
-#define NUM 10
+#define ENTRY_NUM (1000 * 1000)
+#define NUM 1000
 
 uint64_t c1,
     c2;
