@@ -19,39 +19,46 @@ int AppendEntriesRPC(
     AERPC_A->term = AS_PS->log[L_VS->nextIndex[0]].term;
     AERPC_A->prevLogIndex = L_VS->nextIndex[0] - 1;
     AERPC_A->prevLogTerm = AS_PS->log[AERPC_A->prevLogIndex].term;
-    strcpy(AERPC_A->entries[0], AS_PS->log[L_VS->nextIndex[0]].entry);
+    for (int i = 1; i < NUM; i++)
+    {
+        strcpy(AERPC_A->entries[i - 1], AS_PS->log[L_VS->nextIndex[0] + (i - 1)].entry);
+    }
     AERPC_A->leaderCommit = AS_VS->commitIndex;
 
-    // output_AERPC_A(AERPC_A);
+    output_AERPC_A(AERPC_A);
 
     for (int i = 0; i < connectserver_num; i++)
     {
         send(sock[i], AERPC_A, sizeof(struct AppendEntriesRPC_Argument), 0);
-        send(sock[i], AERPC_A->entries[0], sizeof(char) * MAX, 0);
+        for (int num = 1; num < NUM; num++)
+        {
+            send(sock[i], AERPC_A->entries[num - 1], sizeof(char) * MAX, 0);
+        }
         recv(sock[i], AERPC_R, sizeof(struct AppendEntriesRPC_Result), MSG_WAITALL);
+        printf("finish sending\n\n");
     }
 
     for (int i = 0; i < connectserver_num; i++)
     {
-        // output_AERPC_R(AERPC_R);
-        // printf("send to server %d\n", i);
+        output_AERPC_R(AERPC_R);
+        printf("send to server %d\n", i);
 
         // • If successful: update nextIndex and matchIndex for follower.
         if (AERPC_R->success == 1)
         {
-            L_VS->nextIndex[i] += 1;
-            L_VS->matchIndex[i] += 1;
+            L_VS->nextIndex[i] += (NUM - 1);
+            L_VS->matchIndex[i] += (NUM - 1);
 
-            replicatelog_num += 1;
+            replicatelog_num += (NUM - 1);
 
-            // printf("Success:%d\n", i);
+            printf("Success:%d\n", i);
         }
         // • If AppendEntries fails because of log inconsistency: decrement nextIndex and retry.
         else
         {
             printf("failure0\n");
-            L_VS->nextIndex[i] -= 1;
-            AERPC_A->prevLogIndex -= 1;
+            L_VS->nextIndex[i] -= (NUM - 1);
+            AERPC_A->prevLogIndex -= (NUM - 1);
             AppendEntriesRPC(connectserver_num, sock, AERPC_A, AERPC_R, L_VS, AS_VS, AS_PS);
             printf("failure1\n");
             exit(1);
@@ -151,24 +158,29 @@ int main(int argc, char *argv[])
     {
         /* followerに送る */
         /* AS_PSの更新 */
+        for (int num = 1; num < NUM; num++)
+        {
+            printf("Input -> ");
+            scanf("%s", str);
 
-        printf("Input -> ");
-        scanf("%s", str);
+            /* log[0]には入れない。log[1]から始める。　first index is 1*/
+            // AERPC_A->entries[0] = str;
+            strcpy(AS_PS->log[(i - 1) * (NUM - 1) + num].entry, str);
+            AS_PS->log[(i - 1) * (NUM - 1) + num].term = AS_PS->currentTerm;
+
+            printf("AS_PS->log[%d].term = %d\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].term);
+            printf("AS_PS->log[%d].entry = %s\n\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].entry);
+        }
         clock_gettime(CLOCK_MONOTONIC, &ts1);
 
-        /* log[0]には入れない。log[1]から始める。　first index is 1だから*/
-        // AERPC_A->entries[0] = str;
-        strcpy(AS_PS->log[i].entry, str);
-
-        AS_PS->log[i].term = AS_PS->currentTerm;
-
         /* logを書き込み */
+
         write_log(i, AS_PS);
-        // read_log(i);
+        read_log(i);
 
         /* AS_VSの更新 */
         // AS_VS->commitIndex = ; ここの段階での変更は起きない
-        AS_VS->LastAppliedIndex += 1; // = i
+        AS_VS->LastAppliedIndex += (NUM - 1); // = i
 
         replicatelog_num = AppendEntriesRPC(connectserver_num, sock, AERPC_A, AERPC_R, L_VS, AS_VS, AS_PS);
 

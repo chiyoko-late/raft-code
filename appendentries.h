@@ -7,10 +7,12 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <time.h>
+// #include <my_sock.h>
 
 #define SERVER_ADDR "0.0.0.0"
-#define MAX (10000 * 10000)
+#define MAX (1000 * 100)
 #define ENTRY_NUM 100
+#define NUM 5
 
 uint64_t c1, c2;
 struct timespec ts1, ts2;
@@ -50,7 +52,6 @@ struct LOG
     int term;
 };
 
-// entryは20個まで可能
 struct AllServer_PersistentState
 {
     int currentTerm;
@@ -109,12 +110,14 @@ void write_log(
         printf("cannot write log\n");
         exit(1);
     }
+    for (int num = 1; num < NUM; num++)
+    {
+        fwrite(&AS_PS->currentTerm, sizeof(int), 1, logfile);
+        fwrite(&AS_PS->voteFor, sizeof(int), 1, logfile);
+        fwrite(&AS_PS->log[(i - 1) * (NUM - 1) + num].term, sizeof(int), 1, logfile);
 
-    fwrite(&AS_PS->currentTerm, sizeof(int), 1, logfile);
-    fwrite(&AS_PS->voteFor, sizeof(int), 1, logfile);
-    fwrite(&AS_PS->log[i].term, sizeof(int), 1, logfile);
-    fwrite(&AS_PS->log[i].entry, sizeof(char), MAX, logfile);
-
+        fwrite(&AS_PS->log[(i - 1) * (NUM - 1) + num].entry, sizeof(char), MAX, logfile);
+    }
     fclose(logfile);
     return;
 }
@@ -130,17 +133,24 @@ void read_log(
     fseek(logfile, 0L, SEEK_SET);
     for (int j = 1; j < i; j++)
     {
-        fseek(logfile, (MAX + 3), SEEK_CUR);
+        fseek(logfile, ((MAX + 12) * (NUM - 1)), SEEK_CUR);
     }
-    fread(&(AS_PS->currentTerm), sizeof(int), 1, logfile);
-    fread(&(AS_PS->voteFor), sizeof(int), 1, logfile);
-    fread(&(AS_PS->log[i].term), sizeof(int), 1, logfile);
-    fread(&(AS_PS->log[i].entry), sizeof(char), MAX, logfile);
+    for (int num = 1; num < NUM; num++)
+    {
+        fread(&(AS_PS->currentTerm), sizeof(int), 1, logfile);
+        fread(&(AS_PS->voteFor), sizeof(int), 1, logfile);
+        fread(&(AS_PS->log[(i - 1) * (NUM - 1) + num].term), sizeof(int), 1, logfile);
 
-    printf("[logfile]AS_PS->currentTerm = %d\n", AS_PS->currentTerm);
-    printf("[logfile] AS_PS->voteFor = %d\n", AS_PS->voteFor);
-    printf("[logfile] AS_PS->log[%d].term = %d\n", i, AS_PS->log[i].term);
-    printf("[logfile] AS_PS->log[%d].entry = %s\n", i, AS_PS->log[i].entry);
+        fread(&(AS_PS->log[(i - 1) * (NUM - 1) + num].entry), sizeof(char), MAX, logfile);
+    }
+    for (int num = 1; num < NUM; num++)
+    {
+        printf("[logfile] AS_PS->currentTerm = %d\n", AS_PS->currentTerm);
+        printf("[logfile] AS_PS->voteFor = %d\n", AS_PS->voteFor);
+        printf("[logfile] AS_PS->log[%d].term = %d\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].term);
+
+        printf("[logfile] AS_PS->log[%d].entry = %s\n\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].entry);
+    }
 
     fclose(logfile);
     return;
@@ -148,30 +158,23 @@ void read_log(
 
 void output_AERPC_A(struct AppendEntriesRPC_Argument *p)
 {
+    printf("---appendEntriesRPC---\n");
     printf("term: %d\n", p->term);
-    printf("entry: %s\n", p->entries[0]); // 今は一度に一つのentryしか送らない場合のみ考える
+    for (int i = 1; i < NUM; i++)
+    {
+        printf("entry: %s\n", p->entries[i - 1]);
+    }
     printf("prevLogIndex: %d\n", p->prevLogIndex);
     printf("prevLogTerm: %d\n", p->prevLogTerm);
     printf("LeaderCommitIndex: %d\n", p->leaderCommit);
-
+    printf("----------------------\n");
     return;
 }
 
 void output_AERPC_R(struct AppendEntriesRPC_Result *p)
 {
+    printf("**AERPC_R**\n");
     printf("term: %d\n", p->term);
     printf("bool: %d\n", p->success);
+    printf("***********\n");
 }
-
-// void timecheck()
-// {
-//     clock_gettime(CLOCK_MONOTONIC, &ts1);
-//     c1 = rdtscp();
-//     sleep(1);
-//     c2 = rdtscp();
-//     clock_gettime(CLOCK_MONOTONIC, &ts2);
-
-//     t = ts2.tv_sec - ts1.tv_sec + (ts2.tv_nsec - ts1.tv_nsec) / 1e9;
-
-//     printf("time=%.4fs clock=%.0fMHz\n", t, (c2 - c1) / t / 1e6);
-// }

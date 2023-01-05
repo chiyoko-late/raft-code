@@ -38,16 +38,21 @@ int consistency_check(
         return false;
     }
 
+    printf("rpc->prevLogIndex = %d", rpc->prevLogIndex);
+
     // 4. Append any new entries not already in the log
-    as_ps->log[rpc->prevLogIndex + 1].term = rpc->term;
-    strcpy(as_ps->log[rpc->prevLogIndex + 1].entry, rpc->entries[0]);
+    for (int num = 1; num < NUM; num++)
+    {
+        // as_ps->log[rpc->prevLogIndex + 1].term = rpc->term;
+        as_ps->log[rpc->prevLogIndex + num].term = rpc->term;
+        strcpy(as_ps->log[rpc->prevLogIndex + num].entry, rpc->entries[num - 1]);
+    }
 
-    as_vs->LastAppliedIndex = rpc->prevLogIndex + 1;
-
+    // ここらへん変えてる途中。
+    as_vs->LastAppliedIndex = rpc->prevLogIndex + NUM;
     /* log記述 */
-
-    write_log(rpc->prevLogIndex + 1, as_ps);
-    read_log(rpc->prevLogIndex + 1);
+    write_log(rpc->prevLogIndex / (NUM - 1) + 1, as_ps);
+    read_log(rpc->prevLogIndex / (NUM - 1) + 1);
 
     // 5. If leaderCmakeommit> commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
     if (rpc->leaderCommit > as_vs->commitIndex)
@@ -70,8 +75,11 @@ int transfer(
     /* クライアントから文字列を受信 */
     // ここ変える
     recv(sock, AERPC_A, sizeof(struct AppendEntriesRPC_Argument), MSG_WAITALL);
-    recv(sock, AERPC_A->entries[0], sizeof(char) * MAX, MSG_WAITALL);
-    // output_AERPC_A(AERPC_A);
+    for (int num = 1; num < NUM; num++)
+    {
+        recv(sock, AERPC_A->entries[num - 1], sizeof(char) * MAX, MSG_WAITALL);
+    }
+    output_AERPC_A(AERPC_A);
 
     // consistency check
     AERPC_R->success = consistency_check(AERPC_A, AS_PS, AS_VS);
@@ -88,7 +96,6 @@ int transfer(
     /* 受信した文字列を表示 */
     // printf("replied\n");
     // output_AERPC_A(AERPC_A);
-
     return 0;
 }
 
