@@ -59,7 +59,7 @@ int consistency_check(
     {
         as_vs->commitIndex = rpc->leaderCommit;
     }
-    printf("write log\n");
+    // printf("write log\n");
 
     return true;
 };
@@ -74,10 +74,13 @@ int transfer(
 
     /* クライアントから文字列を受信 */
     // ここ変える
-    recv(sock, AERPC_A, sizeof(struct AppendEntriesRPC_Argument), MSG_WAITALL);
+    // recv(sock, AERPC_A, sizeof(struct AppendEntriesRPC_Argument), MSG_WAITALL);
+    my_recv(sock, AERPC_A, sizeof(struct AppendEntriesRPC_Argument));
+
     for (int num = 1; num < NUM; num++)
     {
-        recv(sock, AERPC_A->entries[num - 1], sizeof(char) * MAX, MSG_WAITALL);
+        // recv(sock, AERPC_A->entries[num - 1], sizeof(char) * MAX, MSG_WAITALL);
+        my_recv(sock, AERPC_A->entries[num - 1], sizeof(char) * MAX);
     }
     output_AERPC_A(AERPC_A);
 
@@ -91,7 +94,8 @@ int transfer(
     }
 
     // lerderに返答
-    send(sock, AERPC_R, sizeof(struct AppendEntriesRPC_Result), 0);
+    // send(sock, AERPC_R, sizeof(struct AppendEntriesRPC_Result), 0);
+    my_send(sock, AERPC_R, sizeof(struct AppendEntriesRPC_Result));
 
     /* 受信した文字列を表示 */
     // printf("replied\n");
@@ -108,6 +112,16 @@ int main(int argc, char *argv[])
     int SERVER_PORT = atoi(argv[1]);
 
     w_addr = socket(AF_INET, SOCK_STREAM, 0);
+    // if (w_addr < 0)
+    // {
+    //     perror("socket error ");
+    //     exit(0);
+    // }
+    // if (argc != 3 || argv[1] == 0)
+    // {
+    //     printf("Usage : \n $> %s [port number]\n", argv[0]);
+    //     exit(0);
+    // }
 
     /* 構造体を全て0にセット */
     memset(&a_addr, 0, sizeof(struct sockaddr_in));
@@ -119,6 +133,23 @@ int main(int argc, char *argv[])
 
     /* ソケットに情報を設定 */
     bind(w_addr, (const struct sockaddr *)&a_addr, sizeof(a_addr));
+    // ＊＊
+    // int opt = 1;
+    // // ポートが解放されない場合, SO_REUSEADDRを使う
+    // if (setsockopt(w_addr, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt)) == -1)
+    // {
+    //     perror("setsockopt error ");
+    //     close(w_addr);
+    //     exit(0);
+    // }
+    // if (bind(w_addr, (struct sockaddr *)&a_addr, sizeof(a_addr)) == -1)
+    // {
+    //     perror("bind error ");
+    //     close(w_addr);
+    //     exit(0);
+    // }
+    // printf("bind port=%d\n", SERVER_PORT);
+    // ＊＊
 
     /* ソケットを接続待ちに設定 */
     listen(w_addr, 3);
@@ -128,7 +159,7 @@ int main(int argc, char *argv[])
     struct AllServer_PersistentState *AS_PS = malloc(sizeof(struct AllServer_PersistentState));
     struct AllServer_VolatileState *AS_VS = malloc(sizeof(struct AllServer_VolatileState));
     entries_box(AERPC_A);
-    printf("makefile\n");
+    printf("made logfile\n");
 
     make_logfile(argv[2]);
 

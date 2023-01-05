@@ -1,6 +1,6 @@
 #include "appendentries.h"
 #include "debug.h"
-#define NULL __DARWIN_NULL
+// #define NULL __DARWIN_NULL
 
 int AppendEntriesRPC(
     int connectserver_num,
@@ -29,12 +29,16 @@ int AppendEntriesRPC(
 
     for (int i = 0; i < connectserver_num; i++)
     {
-        send(sock[i], AERPC_A, sizeof(struct AppendEntriesRPC_Argument), 0);
+        // send(sock[i], AERPC_A, sizeof(struct AppendEntriesRPC_Argument), 0);
+        my_send(sock[i], AERPC_A, sizeof(struct AppendEntriesRPC_Argument));
         for (int num = 1; num < NUM; num++)
         {
-            send(sock[i], AERPC_A->entries[num - 1], sizeof(char) * MAX, 0);
+            // send(sock[i], AERPC_A->entries[num - 1], sizeof(char) * MAX, 0);
+            my_send(sock[i], AERPC_A->entries[num - 1], sizeof(char) * MAX);
         }
-        recv(sock[i], AERPC_R, sizeof(struct AppendEntriesRPC_Result), MSG_WAITALL);
+        // recv(sock[i], AERPC_R, sizeof(struct AppendEntriesRPC_Result), MSG_WAITALL);
+        my_recv(sock[i], AERPC_R, sizeof(struct AppendEntriesRPC_Result));
+
         printf("finish sending\n\n");
     }
 
