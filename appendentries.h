@@ -24,9 +24,9 @@
 // #include <sys/epoll.h>
 
 #define SERVER_ADDR "0.0.0.0"
-#define MAX (1000 * 100)
-#define ENTRY_NUM (1000 * 1000)
-#define NUM 1000
+#define STRING_MAX (1000 * 100)
+#define ALL_ACCEPTED_ENTRIES (1000 * 1000)
+#define ONCE_SEND_ENTRIES 1000
 
 uint64_t c1,
     c2;
@@ -49,7 +49,7 @@ struct AppendEntriesRPC_Argument
     int leaderID;
     int prevLogIndex;
     int prevLogTerm;
-    char *entries[ENTRY_NUM];
+    char *entries[STRING_MAX];
     // struct appended_entry entries[ENTRY_NUM];
     int leaderCommit;
 };
@@ -63,7 +63,7 @@ struct AppendEntriesRPC_Result
 
 struct LOG
 {
-    char entry[MAX];
+    char entry[STRING_MAX];
     int term;
 };
 
@@ -71,7 +71,7 @@ struct AllServer_PersistentState
 {
     int currentTerm;
     int voteFor;
-    struct LOG log[ENTRY_NUM];
+    struct LOG log[ALL_ACCEPTED_ENTRIES];
 };
 
 struct AllServer_VolatileState
@@ -89,9 +89,9 @@ struct Leader_VolatileState
 void entries_box(
     struct AppendEntriesRPC_Argument *AERPC_A)
 {
-    for (int i = 0; i < ENTRY_NUM; i++)
+    for (int i = 0; i < ONCE_SEND_ENTRIES; i++)
     {
-        AERPC_A->entries[i] = malloc(sizeof(char) * MAX);
+        AERPC_A->entries[i] = malloc(sizeof(char) * STRING_MAX);
     }
 }
 
@@ -125,13 +125,13 @@ void write_log(
         printf("cannot write log\n");
         exit(1);
     }
-    for (int num = 1; num < NUM; num++)
+    for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
     {
         fwrite(&AS_PS->currentTerm, sizeof(int), 1, logfile);
         fwrite(&AS_PS->voteFor, sizeof(int), 1, logfile);
-        fwrite(&AS_PS->log[(i - 1) * (NUM - 1) + num].term, sizeof(int), 1, logfile);
+        fwrite(&AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].term, sizeof(int), 1, logfile);
 
-        fwrite(&AS_PS->log[(i - 1) * (NUM - 1) + num].entry, sizeof(char), MAX, logfile);
+        fwrite(&AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry, sizeof(char), STRING_MAX, logfile);
     }
     fclose(logfile);
     return;
@@ -148,23 +148,23 @@ void read_log(
     fseek(logfile, 0L, SEEK_SET);
     for (int j = 1; j < i; j++)
     {
-        fseek(logfile, ((MAX + 12) * (NUM - 1)), SEEK_CUR);
+        fseek(logfile, ((STRING_MAX + 12) * (ONCE_SEND_ENTRIES - 1)), SEEK_CUR);
     }
-    for (int num = 1; num < NUM; num++)
+    for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
     {
         fread(&(AS_PS->currentTerm), sizeof(int), 1, logfile);
         fread(&(AS_PS->voteFor), sizeof(int), 1, logfile);
-        fread(&(AS_PS->log[(i - 1) * (NUM - 1) + num].term), sizeof(int), 1, logfile);
+        fread(&(AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].term), sizeof(int), 1, logfile);
 
-        fread(&(AS_PS->log[(i - 1) * (NUM - 1) + num].entry), sizeof(char), MAX, logfile);
+        fread(&(AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry), sizeof(char), STRING_MAX, logfile);
     }
-    for (int num = 1; num < NUM; num++)
+    for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
     {
         printf("[logfile] AS_PS->currentTerm = %d\n", AS_PS->currentTerm);
         printf("[logfile] AS_PS->voteFor = %d\n", AS_PS->voteFor);
-        printf("[logfile] AS_PS->log[%d].term = %d\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].term);
+        printf("[logfile] AS_PS->log[%d].term = %d\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].term);
 
-        printf("[logfile] AS_PS->log[%d].entry = %s\n\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].entry);
+        printf("[logfile] AS_PS->log[%d].entry = %s\n\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry);
     }
 
     fclose(logfile);
@@ -175,7 +175,7 @@ void output_AERPC_A(struct AppendEntriesRPC_Argument *p)
 {
     printf("---appendEntriesRPC---\n");
     printf("term: %d\n", p->term);
-    for (int i = 1; i < NUM; i++)
+    for (int i = 1; i < ONCE_SEND_ENTRIES; i++)
     {
         printf("entry: %s\n", p->entries[i - 1]);
     }

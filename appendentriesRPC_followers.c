@@ -29,9 +29,9 @@ int consistency_check(
 
         while (j == 0)
         {
-            for (int i = rpc->prevLogIndex + 1; i < ENTRY_NUM; i++)
+            for (int i = rpc->prevLogIndex + 1; i < ONCE_SEND_ENTRIES; i++)
             {
-                memset(as_ps->log[rpc->prevLogIndex + 1].entry, 0, sizeof(char) * MAX);
+                memset(as_ps->log[rpc->prevLogIndex + 1].entry, 0, sizeof(char) * STRING_MAX);
             }
         }
         printf("reject3\n");
@@ -41,7 +41,7 @@ int consistency_check(
     printf("rpc->prevLogIndex = %d", rpc->prevLogIndex);
 
     // 4. Append any new entries not already in the log
-    for (int num = 1; num < NUM; num++)
+    for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
     {
         // as_ps->log[rpc->prevLogIndex + 1].term = rpc->term;
         as_ps->log[rpc->prevLogIndex + num].term = rpc->term;
@@ -49,10 +49,10 @@ int consistency_check(
     }
 
     // ここらへん変えてる途中。
-    as_vs->LastAppliedIndex = rpc->prevLogIndex + NUM;
+    as_vs->LastAppliedIndex = rpc->prevLogIndex + ONCE_SEND_ENTRIES;
     /* log記述 */
-    write_log(rpc->prevLogIndex / (NUM - 1) + 1, as_ps);
-    // read_log(rpc->prevLogIndex / (NUM - 1) + 1);
+    write_log(rpc->prevLogIndex / (ONCE_SEND_ENTRIES - 1) + 1, as_ps);
+    // read_log(rpc->prevLogIndex / (ONCE_SEND_ENTRIES - 1) + 1);
 
     // 5. If leaderCmakeommit> commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
     if (rpc->leaderCommit > as_vs->commitIndex)
@@ -77,10 +77,10 @@ int transfer(
     // recv(sock, AERPC_A, sizeof(struct AppendEntriesRPC_Argument), MSG_WAITALL);
     my_recv(sock, AERPC_A, sizeof(struct AppendEntriesRPC_Argument));
 
-    for (int num = 1; num < NUM; num++)
+    for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
     {
         // recv(sock, AERPC_A->entries[num - 1], sizeof(char) * MAX, MSG_WAITALL);
-        my_recv(sock, AERPC_A->entries[num - 1], sizeof(char) * MAX);
+        my_recv(sock, AERPC_A->entries[num - 1], sizeof(char) * STRING_MAX);
     }
     // output_AERPC_A(AERPC_A);
 
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
     AS_PS->log[0].term = 0;
     for (int i = 0; i < 20; i++)
     {
-        memset(AS_PS->log[i].entry, 0, sizeof(char) * MAX);
+        memset(AS_PS->log[i].entry, 0, sizeof(char) * STRING_MAX);
     }
     AS_VS->commitIndex = 0;
     AS_VS->LastAppliedIndex = 0;
