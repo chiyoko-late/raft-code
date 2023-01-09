@@ -14,19 +14,10 @@
 #include <fcntl.h>
 #include "my_sock.h"
 
-// #include <stdio.h>
-// #include <stdlib.h>
-// #include <string.h>
-// #include <unistd.h>
-// #include <sys/socket.h>
-// #include <sys/types.h>
-// #include <arpa/inet.h>
-// #include <sys/epoll.h>
-
 #define SERVER_ADDR "0.0.0.0"
 #define STRING_MAX (1000 * 100)
 #define ALL_ACCEPTED_ENTRIES (1000 * 1000)
-#define ONCE_SEND_ENTRIES 1000
+#define ONCE_SEND_ENTRIES 100
 
 uint64_t c1,
     c2;
@@ -43,17 +34,20 @@ static uint64_t rdtscp()
     return (rdx << 32) | rax;
 }
 
+struct append_entries
+{
+    char entry[STRING_MAX];
+};
+
 struct AppendEntriesRPC_Argument
 {
     int term;
     int leaderID;
     int prevLogIndex;
     int prevLogTerm;
-    char *entries[STRING_MAX];
-    // struct appended_entry entries[ENTRY_NUM];
     int leaderCommit;
+    struct append_entries entries[ONCE_SEND_ENTRIES];
 };
-//*entries[ENTRY_NUM]なのは、効率のために複数のentryを同時に送ることがあるから。
 
 struct AppendEntriesRPC_Result
 {
@@ -74,6 +68,15 @@ struct AllServer_PersistentState
     struct LOG log[ALL_ACCEPTED_ENTRIES];
 };
 
+// struct temp_log
+// {
+//     int currentTerm;
+//     int voteFor;
+//     // struct LOG log[1];
+//     char entry[STRING_MAX];
+//     int term;
+// };
+
 struct AllServer_VolatileState
 {
     int commitIndex;
@@ -86,20 +89,11 @@ struct Leader_VolatileState
     int matchIndex[5];
 };
 
-void entries_box(
-    struct AppendEntriesRPC_Argument *AERPC_A)
-{
-    for (int i = 0; i < ONCE_SEND_ENTRIES; i++)
-    {
-        AERPC_A->entries[i] = malloc(sizeof(char) * STRING_MAX);
-    }
-}
-
 // char filename[20];
 char *filename;
 char *logfilename;
 
-// logfile初期化
+// // logfile初期化
 void make_logfile(char *name)
 {
     FILE *logfile;
@@ -112,6 +106,7 @@ void make_logfile(char *name)
 
     return;
 }
+
 void write_log(
     // char filename[],
     int i,
@@ -177,7 +172,7 @@ void output_AERPC_A(struct AppendEntriesRPC_Argument *p)
     printf("term: %d\n", p->term);
     for (int i = 1; i < ONCE_SEND_ENTRIES; i++)
     {
-        printf("entry: %s\n", p->entries[i - 1]);
+        printf("entry: %s\n", p->entries[i - 1].entry);
     }
     printf("prevLogIndex: %d\n", p->prevLogIndex);
     printf("prevLogTerm: %d\n", p->prevLogTerm);

@@ -22,7 +22,7 @@ int AppendEntriesRPC(
     // AERPC_A->prevLogTerm = 0;
     for (int i = 1; i < ONCE_SEND_ENTRIES; i++)
     {
-        strcpy(AERPC_A->entries[i - 1], AS_PS->log[L_VS->nextIndex[0] + (i - 1)].entry);
+        strcpy(AERPC_A->entries[i - 1].entry, AS_PS->log[L_VS->nextIndex[0] + (i - 1)].entry);
     }
     AERPC_A->leaderCommit = AS_VS->commitIndex;
 
@@ -32,21 +32,21 @@ int AppendEntriesRPC(
     {
         // send(sock[i], AERPC_A, sizeof(struct AppendEntriesRPC_Argument), 0);
         my_send(sock[i], AERPC_A, sizeof(struct AppendEntriesRPC_Argument));
+
         for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
         {
             // send(sock[i], AERPC_A->entries[num - 1], sizeof(char) * MAX, 0);
-            my_send(sock[i], AERPC_A->entries[num - 1], sizeof(char) * STRING_MAX);
+            my_send(sock[i], AERPC_A->entries[num - 1].entry, sizeof(char) * STRING_MAX);
         }
+        printf("finish sending\n\n");
         // recv(sock[i], AERPC_R, sizeof(struct AppendEntriesRPC_Result), MSG_WAITALL);
         my_recv(sock[i], AERPC_R, sizeof(struct AppendEntriesRPC_Result));
-
-        // printf("finish sending\n\n");
     }
 
     for (int i = 0; i < connectserver_num; i++)
     {
         // output_AERPC_R(AERPC_R);
-        // printf("send to server %d\n", i);
+        printf("send to server %d\n", i);
 
         // • If successful: update nextIndex and matchIndex for follower.
         if (AERPC_R->success == 1)
@@ -75,12 +75,12 @@ int AppendEntriesRPC(
 
 int main(int argc, char *argv[])
 {
-    int SERVER_PORT[5];
-    SERVER_PORT[0] = 1234;
-    SERVER_PORT[1] = 2345;
-    SERVER_PORT[2] = 3456;
-    SERVER_PORT[3] = 4567;
-    SERVER_PORT[4] = 5678;
+    int port[5];
+    port[0] = 1234;
+    port[1] = 2345;
+    port[2] = 3456;
+    port[3] = 4567;
+    port[4] = 5678;
 
     int sock[5];
     struct sockaddr_in addr[5];
@@ -89,30 +89,46 @@ int main(int argc, char *argv[])
     for (int i = 0; i < 5; i++)
     {
         sock[i] = socket(AF_INET, SOCK_STREAM, 0);
+        if (sock[i] < 0)
+        {
+            perror("socket error ");
+            exit(0);
+        }
     }
 
-    /* 構造体を全て0にセット */
     for (int i = 0; i < 5; i++)
     {
         memset(&addr[i], 0, sizeof(struct sockaddr_in));
     }
-
     /* サーバーのIPアドレスとポートの情報を設定 */
     for (int i = 0; i < 5; i++)
     {
         addr[i].sin_family = AF_INET;
-        addr[i].sin_port = htons((unsigned short)SERVER_PORT[i]);
-        addr[i].sin_addr.s_addr = inet_addr(SERVER_ADDR);
+        addr[i].sin_port = htons(port[i]);
+        addr[i].sin_addr.s_addr = htonl(INADDR_ANY);
+        const size_t addr_size = sizeof(addr);
     }
 
-    /* followerとconnect */
+    int opt = 1;
+    // ポートが解放されない場合, SO_REUSEADDRを使う
+    for (int i = 0; i < 5; i++)
+    {
+        if (setsockopt(sock[i], SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt)) == -1)
+        {
+            perror("setsockopt error ");
+            close(sock[i]);
+            exit(0);
+        }
+    }
+
+    // /* followerとconnect */
     int connectserver_num = 0;
     printf("Start connect...\n");
     for (int i = 0; i < 5; i++)
     {
         int k = 0;
         connect(sock[i], (struct sockaddr *)&addr[i], sizeof(struct sockaddr_in));
-        recv(sock[i], &k, sizeof(int) * 1, MSG_WAITALL);
+        my_recv(sock[i], &k, sizeof(int) * 1);
         if (k == 1)
         {
             connectserver_num += k;
@@ -125,7 +141,6 @@ int main(int argc, char *argv[])
     struct AllServer_PersistentState *AS_PS = malloc(sizeof(struct AllServer_PersistentState));
     struct AllServer_VolatileState *AS_VS = malloc(sizeof(struct AllServer_VolatileState));
     struct Leader_VolatileState *L_VS = malloc(sizeof(struct Leader_VolatileState));
-    entries_box(AERPC_A);
 
     // 初期設定
     AERPC_A->term = 1;
@@ -184,7 +199,7 @@ int main(int argc, char *argv[])
 
         /* logを書き込み */
 
-        write_log(i, AS_PS);
+        // write_log(i, AS_PS);
         // read_log(i);
 
         /* AS_VSの更新 */
@@ -204,11 +219,5 @@ int main(int argc, char *argv[])
         printf("time=%.4fs\n", t);
     }
 
-    /* ソケット通信をクローズ */
-    // for (int i = 0; i < 5; i++)
-    // {
-    //     close(sock[i]);
-    // }
-
-    return 0;
+    exit(0);
 }

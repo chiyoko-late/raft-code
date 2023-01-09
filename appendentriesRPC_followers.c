@@ -38,14 +38,14 @@ int consistency_check(
         return false;
     }
 
-    printf("rpc->prevLogIndex = %d", rpc->prevLogIndex);
+    // printf("rpc->prevLogIndex = %d\n", rpc->prevLogIndex);
 
     // 4. Append any new entries not already in the log
     for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
     {
         // as_ps->log[rpc->prevLogIndex + 1].term = rpc->term;
         as_ps->log[rpc->prevLogIndex + num].term = rpc->term;
-        strcpy(as_ps->log[rpc->prevLogIndex + num].entry, rpc->entries[num - 1]);
+        strcpy(as_ps->log[rpc->prevLogIndex + num].entry, rpc->entries[num - 1].entry);
     }
 
     // ここらへん変えてる途中。
@@ -74,13 +74,11 @@ int transfer(
 
     /* クライアントから文字列を受信 */
     // ここ変える
-    // recv(sock, AERPC_A, sizeof(struct AppendEntriesRPC_Argument), MSG_WAITALL);
     my_recv(sock, AERPC_A, sizeof(struct AppendEntriesRPC_Argument));
 
     for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
     {
-        // recv(sock, AERPC_A->entries[num - 1], sizeof(char) * MAX, MSG_WAITALL);
-        my_recv(sock, AERPC_A->entries[num - 1], sizeof(char) * STRING_MAX);
+        my_recv(sock, AERPC_A->entries[num - 1].entry, sizeof(char) * STRING_MAX);
     }
     // output_AERPC_A(AERPC_A);
 
@@ -94,71 +92,65 @@ int transfer(
     }
 
     // lerderに返答
-    // send(sock, AERPC_R, sizeof(struct AppendEntriesRPC_Result), 0);
     my_send(sock, AERPC_R, sizeof(struct AppendEntriesRPC_Result));
 
     /* 受信した文字列を表示 */
-    // printf("replied\n");
+    printf("replied\n");
     // output_AERPC_A(AERPC_A);
     return 0;
 }
 
 int main(int argc, char *argv[])
 {
-    int w_addr, c_sock;
-    struct sockaddr_in a_addr;
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0)
+    {
+        perror("socket error ");
+        exit(0);
+    }
+    if (argv[1] == 0)
+    {
+        printf("Usage : \n $> %s [port number]\n", argv[0]);
+        exit(0);
+    }
+    int port = atoi(argv[1]);
+    struct sockaddr_in addr = {
+        0,
+    };
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    const size_t addr_size = sizeof(addr);
 
-    /* ソケットを作成 */
-    int SERVER_PORT = atoi(argv[1]);
+    int opt = 1;
+    // ポートが解放されない場合, SO_REUSEADDRを使う
+    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt)) == -1)
+    {
+        perror("setsockopt error ");
+        close(sock);
+        exit(0);
+    }
+    if (bind(sock, (struct sockaddr *)&addr, addr_size) == -1)
+    {
+        perror("bind error ");
+        close(sock);
+        exit(0);
+    }
+    printf("bind port=%d\n", port);
 
-    w_addr = socket(AF_INET, SOCK_STREAM, 0);
-    // if (w_addr < 0)
-    // {
-    //     perror("socket error ");
-    //     exit(0);
-    // }
-    // if (argc != 3 || argv[1] == 0)
-    // {
-    //     printf("Usage : \n $> %s [port number]\n", argv[0]);
-    //     exit(0);
-    // }
-
-    /* 構造体を全て0にセット */
-    memset(&a_addr, 0, sizeof(struct sockaddr_in));
-
-    /* サーバーのIPアドレスとポートの情報を設定 */
-    a_addr.sin_family = AF_INET;
-    a_addr.sin_port = htons((unsigned short)SERVER_PORT);
-    a_addr.sin_addr.s_addr = inet_addr(SERVER_ADDR);
-
-    /* ソケットに情報を設定 */
-    bind(w_addr, (const struct sockaddr *)&a_addr, sizeof(a_addr));
-    // ＊＊
-    // int opt = 1;
-    // // ポートが解放されない場合, SO_REUSEADDRを使う
-    // if (setsockopt(w_addr, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt)) == -1)
-    // {
-    //     perror("setsockopt error ");
-    //     close(w_addr);
-    //     exit(0);
-    // }
-    // if (bind(w_addr, (struct sockaddr *)&a_addr, sizeof(a_addr)) == -1)
-    // {
-    //     perror("bind error ");
-    //     close(w_addr);
-    //     exit(0);
-    // }
-    // printf("bind port=%d\n", SERVER_PORT);
-    // ＊＊
-
-    /* ソケットを接続待ちに設定 */
-    listen(w_addr, 3);
+    // クライアントのコネクション待ち状態は最大10
+    if (listen(sock, 10) == -1)
+    {
+        perror("listen error ");
+        close(sock);
+        exit(0);
+    }
+    printf("listen success!\n");
 
     struct AppendEntriesRPC_Argument *AERPC_A = malloc(sizeof(struct AppendEntriesRPC_Argument));
     struct AppendEntriesRPC_Result *AERPC_R = malloc(sizeof(struct AppendEntriesRPC_Result));
     struct AllServer_PersistentState *AS_PS = malloc(sizeof(struct AllServer_PersistentState));
     struct AllServer_VolatileState *AS_VS = malloc(sizeof(struct AllServer_VolatileState));
-    entries_box(AERPC_A);
     printf("made logfile\n");
 
     make_logfile(argv[2]);
@@ -172,27 +164,57 @@ int main(int argc, char *argv[])
     AS_VS->commitIndex = 0;
     AS_VS->LastAppliedIndex = 0;
 
+    int last_id = 0;
+    int sock_client = 0;
+    char *buffer = (char *)malloc(32 * 1024 * 1024);
+
+ACCEPT:
+    // 接続が切れた場合, acceptからやり直す
+    printf("last_id=%d\n", last_id);
+    int old_sock_client = sock_client;
+    struct sockaddr_in accept_addr = {
+        0,
+    };
+    socklen_t accpet_addr_size = sizeof(accept_addr);
+    sock_client = accept(sock, (struct sockaddr *)&accept_addr, &accpet_addr_size);
+    printf("sock_client=%d\n", sock_client);
+    if (sock_client == 0 || sock_client < 0)
+    {
+        perror("accept error ");
+        exit(0);
+    }
+    printf("accept success!\n");
+    // ここで一回送って接続数確認に使う
     int k = 1;
-    printf("Waiting connect...\n");
-    c_sock = accept(w_addr, NULL, NULL);
-    send(c_sock, &k, sizeof(int) * 1, 0);
-    printf("Connected!!\n");
+    my_send(sock_client, &k, sizeof(int) * 1);
+    if (old_sock_client > 0)
+    {
+        close(old_sock_client);
+    }
 
     AS_PS->currentTerm += 1;
 
     while (1)
     {
-        transfer(c_sock, AERPC_A, AERPC_R, AS_PS, AS_VS);
+        transfer(sock_client, AERPC_A, AERPC_R, AS_PS, AS_VS);
     }
 
-    exit(1);
+    while (true)
+    {
+        ae_req_t ae_req;
 
-    close(c_sock);
+        if (my_recv(sock_client, &ae_req, sizeof(ae_req_t)))
+            goto ACCEPT;
+        if (my_recv(sock_client, buffer, ae_req.size))
+            goto ACCEPT;
 
-    /* 次の接続要求の受け付けに移る */
+        ae_res_t ae_res;
+        ae_res.id = last_id = ae_req.id;
+        ae_res.status = 0;
 
-    /* 接続待ちソケットをクローズ */
-    close(w_addr);
+        if (my_send(sock_client, &ae_res, sizeof(ae_res_t)))
+            goto ACCEPT;
+    }
 
     return 0;
 }
