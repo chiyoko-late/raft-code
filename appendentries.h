@@ -17,7 +17,7 @@
 #define SERVER_ADDR "0.0.0.0"
 #define STRING_MAX (1000 * 100)
 #define ALL_ACCEPTED_ENTRIES (1000 * 1000)
-#define ONCE_SEND_ENTRIES 100
+#define ONCE_SEND_ENTRIES (1000L * 10)
 
 uint64_t c1,
     c2;
@@ -67,15 +67,6 @@ struct AllServer_PersistentState
     int voteFor;
     struct LOG log[ALL_ACCEPTED_ENTRIES];
 };
-
-// struct temp_log
-// {
-//     int currentTerm;
-//     int voteFor;
-//     // struct LOG log[1];
-//     char entry[STRING_MAX];
-//     int term;
-// };
 
 struct AllServer_VolatileState
 {
@@ -157,9 +148,9 @@ void read_log(
     {
         printf("[logfile] AS_PS->currentTerm = %d\n", AS_PS->currentTerm);
         printf("[logfile] AS_PS->voteFor = %d\n", AS_PS->voteFor);
-        printf("[logfile] AS_PS->log[%d].term = %d\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].term);
+        printf("[logfile] AS_PS->log[%ld].term = %d\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].term);
 
-        printf("[logfile] AS_PS->log[%d].entry = %s\n\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry);
+        printf("[logfile] AS_PS->log[%ld].entry = %s\n\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry);
     }
 
     fclose(logfile);
