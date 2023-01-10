@@ -38,8 +38,6 @@ int consistency_check(
         return false;
     }
 
-    // printf("rpc->prevLogIndex = %d\n", rpc->prevLogIndex);
-
     // 4. Append any new entries not already in the log
     for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
     {
@@ -48,7 +46,6 @@ int consistency_check(
         strcpy(as_ps->log[rpc->prevLogIndex + num].entry, rpc->entries[num - 1].entry);
     }
 
-    // ここらへん変えてる途中。
     as_vs->LastAppliedIndex = rpc->prevLogIndex + ONCE_SEND_ENTRIES;
     /* log記述 */
     write_log(rpc->prevLogIndex / (ONCE_SEND_ENTRIES - 1) + 1, as_ps);
@@ -73,7 +70,6 @@ int transfer(
 {
 
     /* クライアントから文字列を受信 */
-    // ここ変える
     my_recv(sock, AERPC_A, sizeof(struct AppendEntriesRPC_Argument));
 
     for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
@@ -194,7 +190,7 @@ ACCEPT:
 
     AS_PS->currentTerm += 1;
 
-    while (1)
+    for (int i = 1; i < (ALL_ACCEPTED_ENTRIES / ONCE_SEND_ENTRIES); i++)
     {
         transfer(sock_client, AERPC_A, AERPC_R, AS_PS, AS_VS);
     }

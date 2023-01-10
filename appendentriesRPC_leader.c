@@ -16,10 +16,8 @@ int AppendEntriesRPC(
     /* AERPC_Aの設定 */
 
     AERPC_A->term = AS_PS->log[L_VS->nextIndex[0]].term;
-    // AERPC_A->term = 1;
     AERPC_A->prevLogIndex = L_VS->nextIndex[0] - 1;
     AERPC_A->prevLogTerm = AS_PS->log[AERPC_A->prevLogIndex].term;
-    // AERPC_A->prevLogTerm = 0;
     for (int i = 1; i < ONCE_SEND_ENTRIES; i++)
     {
         strcpy(AERPC_A->entries[i - 1].entry, AS_PS->log[L_VS->nextIndex[0] + (i - 1)].entry);
@@ -172,6 +170,15 @@ int main(int argc, char *argv[])
     /* log記述用のファイル名 */
     make_logfile(argv[1]);
 
+    // 時間記録用ファイル
+    FILE *timerec;
+    timerec = fopen("timerecord.txt", "w+");
+    if (timerec == NULL)
+    {
+        printf("cannot open file\n");
+        exit(1);
+    }
+
     printf("Input -> ");
     scanf("%s", str);
 
@@ -182,11 +189,10 @@ int main(int argc, char *argv[])
         /* followerに送る */
         /* AS_PSの更新 */
         printf("%d", i);
+
+        clock_gettime(CLOCK_MONOTONIC, &ts1);
         for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
         {
-            // printf("Input -> ");
-            // scanf("%s", str);
-
             /* log[0]には入れない。log[1]から始める。　first index is 1*/
             // AERPC_A->entries[0] = str;
             strcpy(AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry, str);
@@ -195,7 +201,6 @@ int main(int argc, char *argv[])
             // printf("AS_PS->log[%d].term = %d\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].term);
             // printf("AS_PS->log[%d].entry = %s\n\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].entry);
         }
-        clock_gettime(CLOCK_MONOTONIC, &ts1);
 
         /* logを書き込み */
 
@@ -216,8 +221,11 @@ int main(int argc, char *argv[])
         clock_gettime(CLOCK_MONOTONIC, &ts2);
         t = ts2.tv_sec - ts1.tv_sec + (ts2.tv_nsec - ts1.tv_nsec) / 1e9;
 
-        printf("time=%.4fs\n", t);
+        fprintf(timerec, "%.4fs\n", t);
+        // fwrite(&t, sizeof(double), 1, timerec);
+        printf("%.4f\n", t);
     }
+    fclose(timerec);
 
     exit(0);
 }
