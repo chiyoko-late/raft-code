@@ -85,6 +85,8 @@ int main(int argc, char *argv[])
     port[3] = 4567;
     port[4] = 5678;
 
+    char *serverIP[5];
+
     int sock[5];
     struct sockaddr_in addr[5];
 
@@ -106,9 +108,10 @@ int main(int argc, char *argv[])
     /* サーバーのIPアドレスとポートの情報を設定 */
     for (int i = 0; i < 5; i++)
     {
+        serverIP[i] = argv[i + 3];
         addr[i].sin_family = AF_INET;
         addr[i].sin_port = htons(port[i]);
-        addr[i].sin_addr.s_addr = htonl(INADDR_ANY);
+        addr[i].sin_addr.s_addr = inet_addr(serverIP[i]);
         const size_t addr_size = sizeof(addr);
     }
 
@@ -184,15 +187,15 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    // printf("Input -> ");
-    // scanf("%s", str);
+    printf("Input -> ");
+    scanf("%s", str);
 
     /* 接続済のソケットでデータのやり取り */
     // 今は受け取れるentryが有限
     for (int i = 1; i < (ALL_ACCEPTED_ENTRIES / ONCE_SEND_ENTRIES); i++)
     {
-        printf("Input -> ");
-        scanf("%s", str);
+        // printf("Input -> ");
+        // scanf("%s", str);
         /* followerに送る */
         /* AS_PSの更新 */
         // printf("%d", i);
@@ -205,18 +208,15 @@ int main(int argc, char *argv[])
             strcpy(AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry, str);
             AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].term = AS_PS->currentTerm;
 
-            // printf("AS_PS->log[%d].term = %d\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].term);
-            // printf("AS_PS->log[%d].entry = %s\n\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].entry);
-
             /* logを書き込み */
-            printf("AS_PS->currentTerm = %d\n", AS_PS->currentTerm);
-            printf("AS_PS->voteFor = %d\n", AS_PS->voteFor);
-            printf(" AS_PS->log[%ld].term = %d\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].term);
+            // printf("AS_PS->currentTerm = %d\n", AS_PS->currentTerm);
+            // printf("AS_PS->voteFor = %d\n", AS_PS->voteFor);
+            // printf(" AS_PS->log[%ld].term = %d\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].term);
 
-            printf("AS_PS->log[%ld].entry = %s\n\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry);
+            // printf("AS_PS->log[%ld].entry = %s\n\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry);
         }
         write_log(i, AS_PS);
-        read_log(i);
+        // read_log(i);
 
         /* AS_VSの更新 */
         // AS_VS->commitIndex = ; ここの段階での変更は起きない

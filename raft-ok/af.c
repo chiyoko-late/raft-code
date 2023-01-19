@@ -48,11 +48,10 @@ int consistency_check(
         strcpy(as_ps->log[rpc->prevLogIndex + num].entry, rpc->entries[num - 1].entry);
     }
 
-    // ここらへん変えてる途中。
     as_vs->LastAppliedIndex = rpc->prevLogIndex + ONCE_SEND_ENTRIES;
     /* log記述 */
     write_log(rpc->prevLogIndex / (ONCE_SEND_ENTRIES - 1) + 1, as_ps);
-    read_log(rpc->prevLogIndex / (ONCE_SEND_ENTRIES - 1) + 1);
+    // read_log(rpc->prevLogIndex / (ONCE_SEND_ENTRIES - 1) + 1);
 
     // 5. If leaderCmakeommit> commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
     if (rpc->leaderCommit > as_vs->commitIndex)
@@ -103,6 +102,9 @@ int transfer(
 
 int main(int argc, char *argv[])
 {
+    char *serverIP;
+    serverIP = argv[4];
+
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0)
     {
@@ -120,7 +122,7 @@ int main(int argc, char *argv[])
     };
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_addr.s_addr = inet_addr(serverIP);
     const size_t addr_size = sizeof(addr);
 
     int opt = 1;
